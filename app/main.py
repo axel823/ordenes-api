@@ -1,8 +1,31 @@
-"""Práctica 1 · Mi primer servidor web con FastAPI."""
+"""Prácticas 1 y 2 · API de Órdenes con FastAPI."""
+
+import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-app = FastAPI(title="API de Órdenes", version="0.1.0")
+from app.routers.orders import router as orders_router
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ejecuta acciones al iniciar y cerrar el servidor."""
+    logger.info("API de Órdenes iniciada")
+    yield
+    logger.info("API de Órdenes detenida")
+
+
+app = FastAPI(
+    title="API de Órdenes",
+    version="0.2.0",
+    lifespan=lifespan,
+)
+
+app.include_router(orders_router)
 
 
 @app.get("/health")
