@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.routers.orders import router as orders_router
+from app.routers.web import router as web_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ app = FastAPI(
 )
 
 app.include_router(orders_router)
+app.include_router(web_router)
 
 
 @app.get("/health")

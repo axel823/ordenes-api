@@ -1,102 +1,35 @@
-import pytest
-from fastapi.testclient import TestClient
+"""Pruebas de la API de Órdenes. La fixture `client` está en conftest.py."""
 
-from app.main import app
-from app.repository import OrderRepository, get_repo
+ORDEN = {"cliente": "Ana López", "producto": "Teclado", "cantidad": 2, "precio_unitario": 350.0}
 
 
-@pytest.fixture
-def client():
-    repo = OrderRepository()
-    app.dependency_overrides[get_repo] = lambda: repo
-
-    with TestClient(app) as test_client:
-        yield test_client
-
-    app.dependency_overrides.clear()
+def test_crear_orden_calcula_total(client):
+    r = client.post("/orders", json=ORDEN)
+    assert r.status_code == 201
+    body = r.json()
+    assert body["id"] == 1
+    assert body["total"] == 700.0
+    assert body["status"] == "pendiente"
 
 
-def test_create_order_calculates_total_and_status(client):
-    response = client.post(
-        "/orders",
-        json={
-            "cliente": "Ana López",
-            "producto": "Teclado",
-            "cantidad": 2,
-            "precio_unitario": 350.0,
-        },
-    )
-
-    assert response.status_code == 201
-
-    data = response.json()
-
-    assert data["total"] == 700.0
-    assert data["status"] == "pendiente"
-    assert data["id"] == 1
+def test_crear_orden_invalida_devuelve_422(client):
+    r = client.post("/orders", json={**ORDEN, "cantidad": 0})
+    assert r.status_code == 422
 
 
-def test_invalid_quantity_returns_422(client):
-    response = client.post(
-        "/orders",
-        json={
-            "cliente": "Ana López",
-            "producto": "Teclado",
-            "cantidad": 0,
-            "precio_unitario": 350.0,
-        },
-    )
-
-    assert response.status_code == 422
+def test_obtener_orden_inexistente_devuelve_404(client):
+    r = client.get("/orders/999")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "Orden no encontrada"
 
 
-def test_missing_order_returns_404(client):
-    response = client.get("/orders/999")
+def test_listar_actualizar_y_eliminar(client):
+    client.post("/orders", json=ORDEN)
+    assert len(client.get("/orders").json()) == 1
 
-    assert response.status_code == 404
+    r = client.put("/orders/1", json={**ORDEN, "cantidad": 3})
+    assert r.status_code == 200
+    assert r.json()["total"] == 1050.0
 
-
-def test_list_update_delete(client):
-    client.post(
-        "/orders",
-        json={
-            "cliente": "Ana López",
-            "producto": "Teclado",
-            "cantidad": 2,
-            "precio_unitario": 350.0,
-        },
-    )
-
-    client.post(
-        "/orders",
-        json={
-            "cliente": "Luis Pérez",
-            "producto": "Mouse",
-            "cantidad": 1,
-            "precio_unitario": 200.0,
-        },
-    )
-
-    response = client.get("/orders")
-    assert response.status_code == 200
-    assert len(response.json()) == 2
-
-    response = client.put(
-        "/orders/1",
-        json={
-            "cliente": "Ana López",
-            "producto": "Teclado",
-            "cantidad": 3,
-            "precio_unitario": 350.0,
-        },
-    )
-
-    assert response.status_code == 200
-    assert response.json()["total"] == 1050.0
-
-    response = client.delete("/orders/2")
-    assert response.status_code == 204
-
-    response = client.get("/orders/2")
-    assert response.status_code == 404
-    
+    assert client.delete("/orders/1").status_code == 204
+    assert client.get("/orders/1").status_code == 404
