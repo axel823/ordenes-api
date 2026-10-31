@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
-from ..repository import OrderRepository, get_repo
+from ..repository_sql import SqlOrderRepository, get_repo
 from ..schemas import OrderIn
 from ..services.clientes import (
     ClientesService,
@@ -26,7 +26,7 @@ templates = Jinja2Templates(
     directory=Path(__file__).parent.parent / "templates"
 )
 
-Repo = Annotated[OrderRepository, Depends(get_repo)]
+Repo = Annotated[SqlOrderRepository, Depends(get_repo)]
 Clientes = Annotated[ClientesService, Depends(get_clientes_service)]
 
 

@@ -1,13 +1,15 @@
+"""Rutas de la API de órdenes."""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.repository import OrderRepository, get_repo
-from app.schemas import OrderIn, OrderOut, OrderStatus
+from ..repository_sql import SqlOrderRepository, get_repo
+from ..schemas import OrderIn, OrderOut, OrderStatus
 
-router = APIRouter(prefix="/orders", tags=["orders"])
+router = APIRouter(prefix="/orders", tags=["Órdenes"])
 
-Repo = Annotated[OrderRepository, Depends(get_repo)]
+Repo = Annotated[SqlOrderRepository, Depends(get_repo)]
 
 
 @router.post(
@@ -15,74 +17,74 @@ Repo = Annotated[OrderRepository, Depends(get_repo)]
     response_model=OrderOut,
     status_code=status.HTTP_201_CREATED,
 )
-def create_order(
-    data: OrderIn,
-    repo: Repo,
-) -> OrderOut:
+def crear_orden(data: OrderIn, repo: Repo) -> OrderOut:
+    """Crea una nueva orden."""
     return repo.add(data)
 
 
-@router.get(
-    "",
-    response_model=list[OrderOut],
-)
-def list_orders(
+@router.get("", response_model=list[OrderOut])
+def listar_ordenes(
     repo: Repo,
-    estado: OrderStatus | None = None,
+    status: OrderStatus | None = None,
 ) -> list[OrderOut]:
-    return repo.list(estado)
+    """Lista todas las órdenes, con filtro opcional por estado."""
+    return list(repo.list(status))
 
 
-@router.get(
-    "/{order_id}",
-    response_model=OrderOut,
-)
-def get_order(
-    order_id: int,
-    repo: Repo,
-) -> OrderOut:
-    order = repo.get(order_id)
+@router.get("/{order_id}", response_model=OrderOut)
+def obtener_orden(order_id: int, repo: Repo) -> OrderOut:
+    """Obtiene una orden por su ID."""
+    orden = repo.get(order_id)
 
-    if order is None:
+    if orden is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Orden no encontrada",
         )
 
-    return order
+    return orden
 
 
-@router.put(
-    "/{order_id}",
-    response_model=OrderOut,
-)
-def update_order(
+@router.put("/{order_id}", response_model=OrderOut)
+def actualizar_orden(
     order_id: int,
     data: OrderIn,
     repo: Repo,
 ) -> OrderOut:
-    order = repo.update(order_id, data)
+    """Actualiza una orden completa."""
+    orden = repo.update(order_id, data)
 
-    if order is None:
+    if orden is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Orden no encontrada",
         )
 
-    return order
+    return orden
 
 
-@router.delete(
-    "/{order_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_order(
+@router.patch("/{order_id}/status", response_model=OrderOut)
+def actualizar_estado(
     order_id: int,
+    status: OrderStatus,
     repo: Repo,
-) -> None:
-    deleted = repo.delete(order_id)
+) -> OrderOut:
+    """Actualiza el estado de una orden."""
+    orden = repo.update_status(order_id, status)
 
-    if not deleted:
+    if orden is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Orden no encontrada",
+        )
+
+    return orden
+
+
+@router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
+def eliminar_orden(order_id: int, repo: Repo) -> None:
+    """Elimina una orden."""
+    if not repo.delete(order_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Orden no encontrada",

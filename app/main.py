@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from . import models  # noqa: F401
+from .db import Base, engine
 from app.routers.orders import router as orders_router
 from app.routers.web import router as web_router
 
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Ejecuta acciones al iniciar y cerrar el servidor."""
+    Base.metadata.create_all(engine)
     logger.info("API de Órdenes iniciada")
     yield
     logger.info("API de Órdenes detenida")
